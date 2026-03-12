@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'open3'
-require 'timeout'
 
 module FFMPEG
   class Transcoder
@@ -95,7 +94,7 @@ module FFMPEG
 
         @errors << "ffmpeg returned non-zero exit code" unless wait_thr.value.success?
 
-        rescue Timeout::Error => e
+        rescue IO::TimeoutError => e
           FFMPEG.logger.error "Process hung...\n@command\n#{command}\nOutput\n#{@output}\n"
           raise Error, "Process hung. Full output: #{@output}"
         end
@@ -136,23 +135,11 @@ module FFMPEG
     end
 
     def each_with_timeout(io, pid, seconds, separator = $/)
-      buffer = +""
-      loop do
-        ready = IO.select([io], nil, nil, seconds)
-        if ready.nil?
-          Process.kill('KILL', pid)
-          raise Timeout::Error, 'output wait time expired'
-        end
-        chunk = io.read_nonblock(4096, exception: false)
-        break if chunk.nil?          # EOF
-        next if chunk == :wait_readable
-        buffer << chunk
-        while (idx = buffer.index(separator))
-          line = buffer.slice!(0, idx + separator.length)
-          yield line
-        end
-      end
-      yield buffer unless buffer.empty?
+      io.timeout = seconds
+      io.each(separator) { |line| yield line }
+    rescue IO::TimeoutError
+      Process.kill('KILL', pid)
+      raise IO::TimeoutError, 'output wait time expired'
     end
 
     def optimize_screenshot_parameters(options, transcoder_options)
