@@ -1,14 +1,16 @@
+# frozen_string_literal: true
+
 require 'open3'
+require 'timeout'
 
 module FFMPEG
   class Transcoder
     attr_reader :command, :input
 
-    @@timeout = 30
-
     class << self
       attr_accessor :timeout
     end
+    self.timeout = 30
 
     def initialize(input, output_file, options = EncodingOptions.new, transcoder_options = {})
       if input.is_a?(FFMPEG::Movie)
@@ -63,13 +65,13 @@ module FFMPEG
     # frame= 4855 fps= 46 q=31.0 size=   45306kB time=00:02:42.28 bitrate=2287.0kbits/
     def transcode_movie
       FFMPEG.logger.info("Running transcoding...\n#{command}\n")
-      @output = ""
+      @output = +""
 
       Open3.popen3(*command) do |_stdin, _stdout, stderr, wait_thr|
         begin
           yield(0.0) if block_given?
-          next_line = Proc.new do |line|
-            fix_encoding(line)
+          next_line = lambda do |line|
+            FFMPEG.fix_encoding(line)
             @output << line
             if line.include?("time=")
               if line =~ /time=(\d+):(\d+):(\d+.\d+)/ # ffmpeg 0.8 and above style
@@ -86,7 +88,7 @@ module FFMPEG
           end
 
           if timeout
-            stderr.each_with_timeout(wait_thr.pid, timeout, 'size=', &next_line)
+            each_with_timeout(stderr, wait_thr.pid, timeout, 'size=', &next_line)
           else
             stderr.each('size=', &next_line)
           end
@@ -133,10 +135,24 @@ module FFMPEG
       end
     end
 
-    def fix_encoding(output)
-      output[/test/]
-    rescue ArgumentError
-      output.force_encoding("ISO-8859-1")
+    def each_with_timeout(io, pid, seconds, separator = $/)
+      buffer = +""
+      loop do
+        ready = IO.select([io], nil, nil, seconds)
+        if ready.nil?
+          Process.kill('KILL', pid)
+          raise Timeout::Error, 'output wait time expired'
+        end
+        chunk = io.read_nonblock(4096, exception: false)
+        break if chunk.nil?          # EOF
+        next if chunk == :wait_readable
+        buffer << chunk
+        while (idx = buffer.index(separator))
+          line = buffer.slice!(0, idx + separator.length)
+          yield line
+        end
+      end
+      yield buffer unless buffer.empty?
     end
 
     def optimize_screenshot_parameters(options, transcoder_options)

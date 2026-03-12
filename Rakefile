@@ -7,7 +7,7 @@ RSpec::Core::RakeTask.new('spec') do |t|
   t.pattern = FileList['spec/**/*_spec.rb']
 end
 
-task :default => :spec
+task default: :spec
 
 desc "Push a new version to Rubygems"
 task :publish do

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module FFMPEG
   class EncodingOptions < Hash
     def initialize(options = {})
@@ -26,7 +28,7 @@ module FFMPEG
       keys.sort_by{|k| params_order(k) }.each do |key|
 
         value   = self[key]
-        a = send("convert_#{key}", value) if value && supports_option?(key)
+        a = send(:"convert_#{key}", value) if value && supports_option?(key)
         params += a unless a.nil?
       end
 
@@ -44,8 +46,7 @@ module FFMPEG
 
     private
     def supports_option?(option)
-      option = RUBY_VERSION < "1.9" ? "convert_#{option}" : "convert_#{option}".to_sym
-      private_methods.include?(option)
+      respond_to?(:"convert_#{option}", true)
     end
 
     def convert_aspect(value)

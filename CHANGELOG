@@ -1,6 +1,16 @@
 == Master
 
-Current with 3.0.2
+Breaking Changes:
+* Require Ruby >= 3.3
+* Removed multi_json dependency — uses stdlib JSON
+* Removed IO monkey patch — timeout handling is now private to Transcoder
+* transcode/screenshot now accept keyword arguments for transcoder_options
+
+Improvements:
+* GitHub Actions CI replacing Travis
+* Fixed rotation detection for modern ffmpeg (side_data_list)
+* Fixed SSL detection (scheme instead of port)
+* General Ruby 3.x/4.0 compatibility fixes
 
 == 3.0.2 2016-11-18
 

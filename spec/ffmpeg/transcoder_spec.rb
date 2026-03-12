@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper.rb'
 
 module FFMPEG
@@ -82,7 +84,7 @@ module FFMPEG
           expect(transcoder.encoded).to be_valid
           expect(progress_updates).to include(0.0, 1.0)
           expect(progress_updates.length).to be >= 3
-          expect(File.exists?("#{tmp_path}/awesome.flv")).to be_truthy
+          expect(File.exist?("#{tmp_path}/awesome.flv")).to be_truthy
         end
 
         it "should transcode the movie with EncodingOptions" do

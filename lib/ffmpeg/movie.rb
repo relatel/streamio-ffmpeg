@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 require 'time'
-require 'multi_json'
+require 'json'
 require 'uri'
 require 'net/http'
 
@@ -37,12 +39,12 @@ module FFMPEG
         std_error = stderr.read unless stderr.nil?
       end
 
-      fix_encoding(std_output)
-      fix_encoding(std_error)
+      FFMPEG.fix_encoding(std_output)
+      FFMPEG.fix_encoding(std_error)
 
       begin
-        @metadata = MultiJson.load(std_output, symbolize_keys: true)
-      rescue MultiJson::ParseError
+        @metadata = JSON.parse(std_output, symbolize_names: true)
+      rescue JSON::ParserError
         raise "Could not parse output from FFProbe:\n#{ std_output }"
       end
 
@@ -51,8 +53,8 @@ module FFMPEG
         @duration = 0
 
       else
-        video_streams = @metadata[:streams].select { |stream| stream.key?(:codec_type) and stream[:codec_type] === 'video' }
-        audio_streams = @metadata[:streams].select { |stream| stream.key?(:codec_type) and stream[:codec_type] === 'audio' }
+        video_streams = @metadata[:streams].select { |stream| stream.key?(:codec_type) && stream[:codec_type] === 'video' }
+        audio_streams = @metadata[:streams].select { |stream| stream.key?(:codec_type) && stream[:codec_type] === 'audio' }
 
         @container = @metadata[:format][:format_name]
 
@@ -62,7 +64,7 @@ module FFMPEG
 
         @format_tags = @metadata[:format][:tags]
 
-        @creation_time = if @format_tags and @format_tags.key?(:creation_time)
+        @creation_time = if @format_tags && @format_tags.key?(:creation_time)
                            begin
                              Time.parse(@format_tags[:creation_time])
                            rescue ArgumentError
@@ -93,23 +95,24 @@ module FFMPEG
 
           @video_stream = "#{video_stream[:codec_name]} (#{video_stream[:profile]}) (#{video_stream[:codec_tag_string]} / #{video_stream[:codec_tag]}), #{colorspace}, #{resolution} [SAR #{sar} DAR #{dar}]"
 
-          @rotation = if video_stream.key?(:tags) and video_stream[:tags].key?(:rotate)
+          @rotation = if video_stream.key?(:tags) && video_stream[:tags].key?(:rotate)
                         video_stream[:tags][:rotate].to_i
-                      else
-                        nil
+                      elsif video_stream.key?(:side_data_list)
+                        side_data = video_stream[:side_data_list].find { |sd| sd.key?(:rotation) }
+                        (-side_data[:rotation].to_i) % 360 if side_data
                       end
         end
 
         @audio_streams = audio_streams.map do |stream|
           {
-            :index => stream[:index],
-            :channels => stream[:channels].to_i,
-            :codec_name => stream[:codec_name],
-            :sample_rate => stream[:sample_rate].to_i,
-            :bitrate => stream[:bit_rate].to_i,
-            :channel_layout => stream[:channel_layout],
-            :tags => stream[:streams],
-            :overview => "#{stream[:codec_name]} (#{stream[:codec_tag_string]} / #{stream[:codec_tag]}), #{stream[:sample_rate]} Hz, #{stream[:channel_layout]}, #{stream[:sample_fmt]}, #{stream[:bit_rate]} bit/s"
+            index: stream[:index],
+            channels: stream[:channels].to_i,
+            codec_name: stream[:codec_name],
+            sample_rate: stream[:sample_rate].to_i,
+            bitrate: stream[:bit_rate].to_i,
+            channel_layout: stream[:channel_layout],
+            tags: stream[:streams],
+            overview: "#{stream[:codec_name]} (#{stream[:codec_tag_string]} / #{stream[:codec_tag]}), #{stream[:sample_rate]} Hz, #{stream[:channel_layout]}, #{stream[:sample_fmt]}, #{stream[:bit_rate]} bit/s"
           }
         end
 
@@ -144,15 +147,15 @@ module FFMPEG
     end
 
     def valid?
-      not @invalid
+      !@invalid
     end
 
     def remote?
-      @path =~ URI::regexp(%w(http https))
+      @path.match?(%r{\Ahttps?://})
     end
 
     def local?
-      not remote?
+      !remote?
     end
 
     def width
@@ -164,7 +167,7 @@ module FFMPEG
     end
 
     def resolution
-      unless width.nil? or height.nil?
+      unless width.nil? || height.nil?
         "#{width}x#{height}"
       end
     end
@@ -199,12 +202,12 @@ module FFMPEG
                                end
     end
 
-    def transcode(output_file, options = EncodingOptions.new, transcoder_options = {}, &block)
-      Transcoder.new(self, output_file, options, transcoder_options).run &block
+    def transcode(output_file, options = EncodingOptions.new, **transcoder_options, &block)
+      Transcoder.new(self, output_file, options, transcoder_options).run(&block)
     end
 
-    def screenshot(output_file, options = EncodingOptions.new, transcoder_options = {}, &block)
-      Transcoder.new(self, output_file, options.merge(screenshot: true), transcoder_options).run &block
+    def screenshot(output_file, options = EncodingOptions.new, **transcoder_options, &block)
+      Transcoder.new(self, output_file, options.merge(screenshot: true), transcoder_options).run(&block)
     end
 
     protected
@@ -228,18 +231,12 @@ module FFMPEG
       aspect.nan? ? nil : aspect
     end
 
-    def fix_encoding(output)
-      output[/test/] # Running a regexp on the string throws error if it's not UTF-8
-    rescue ArgumentError
-      output.force_encoding("ISO-8859-1")
-    end
-
     def head(location=@path, limit=FFMPEG.max_http_redirect_attempts)
       url = URI(location)
       return unless url.path
 
       http = Net::HTTP.new(url.host, url.port)
-      http.use_ssl = url.port == 443
+      http.use_ssl = url.scheme == 'https'
       response = http.request_head(url.request_uri)
 
       case response

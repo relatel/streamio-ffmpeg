@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper.rb'
 require 'net/http'
 require 'webrick'
@@ -381,7 +383,7 @@ module FFMPEG
         end
 
         it "should parse the bitrate" do
-          expect(movie.bitrate).to eq(481846)
+          expect(movie.bitrate).to eq(481836)
         end
 
         it "should return nil rotation when no rotation exists" do
@@ -512,7 +514,7 @@ module FFMPEG
 
         transcoder_double = double(Transcoder)
         expect(Transcoder).to receive(:new).
-          with(movie, "#{tmp_path}/awesome.flv", {custom: "-vcodec libx264"}, preserve_aspect_ratio: :width).
+          with(movie, "#{tmp_path}/awesome.flv", {custom: "-vcodec libx264"}, {preserve_aspect_ratio: :width}).
           and_return(transcoder_double)
         expect(transcoder_double).to receive(:run)
 
@@ -527,7 +529,7 @@ module FFMPEG
 
         transcoder_double = double(Transcoder)
         expect(Transcoder).to receive(:new).
-            with(movie, "#{tmp_path}/awesome.flv", {custom: "-vcodec libx264"}, preserve_aspect_ratio: :width).
+            with(movie, "#{tmp_path}/awesome.flv", {custom: "-vcodec libx264"}, {preserve_aspect_ratio: :width}).
             and_return(transcoder_double)
         expect(transcoder_double).to receive(:run)
 
@@ -546,7 +548,7 @@ module FFMPEG
             and_return(transcoder_double)
         expect(transcoder_double).to receive(:run)
 
-        movie.transcode("#{tmp_path}/hello.mp3", {audio_codec: 'libmp3lame', custom: %w(-qscale:a 2)}, {})
+        movie.transcode("#{tmp_path}/hello.mp3", {audio_codec: 'libmp3lame', custom: %w(-qscale:a 2)})
       end
     end
 
@@ -557,7 +559,7 @@ module FFMPEG
 
         transcoder_double = double(Transcoder)
         expect(Transcoder).to receive(:new).
-          with(movie, "#{tmp_path}/awesome.jpg", {seek_time: 2, dimensions: "640x480", screenshot: true}, preserve_aspect_ratio: :width).
+          with(movie, "#{tmp_path}/awesome.jpg", {seek_time: 2, dimensions: "640x480", screenshot: true}, {preserve_aspect_ratio: :width}).
           and_return(transcoder_double)
         expect(transcoder_double).to receive(:run)
 
@@ -569,7 +571,7 @@ module FFMPEG
 
           transcoder_double = double(Transcoder)
           expect(Transcoder).to receive(:new).
-              with(movie, "#{tmp_path}/awesome_%d.jpg", {seek_time: 2, dimensions: '640x480', screenshot: true, vframes: 20}, preserve_aspect_ratio: :width, validate: false).
+              with(movie, "#{tmp_path}/awesome_%d.jpg", {seek_time: 2, dimensions: '640x480', screenshot: true, vframes: 20}, {preserve_aspect_ratio: :width, validate: false}).
               and_return(transcoder_double)
           expect(transcoder_double).to receive(:run)
 

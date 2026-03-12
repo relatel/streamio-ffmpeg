@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe FFMPEG do
@@ -5,16 +7,16 @@ describe FFMPEG do
     after(:each) do
       FFMPEG.logger = Logger.new(nil)
     end
-    
+
     it "should be a Logger" do
       expect(FFMPEG.logger).to be_instance_of(Logger)
     end
-    
+
     it "should be at info level" do
       FFMPEG.logger = nil # Reset the logger so that we get the default
       expect(FFMPEG.logger.level).to eq(Logger::INFO)
     end
-    
+
     it "should be assignable" do
       new_logger = Logger.new(STDOUT)
       FFMPEG.logger = new_logger
@@ -22,15 +24,23 @@ describe FFMPEG do
     end
   end
 
-  describe '.ffmpeg_binary' do
+  describe '.which' do
+    it 'should find an existing executable' do
+      expect(FFMPEG.which('ffmpeg')).to include('ffmpeg')
+    end
 
+    it 'should raise when executable is not found' do
+      expect { FFMPEG.which('not_a_real_binary_xyz') }.to raise_error(Errno::ENOENT)
+    end
+  end
+
+  describe '.ffmpeg_binary' do
     after(:each) do
       FFMPEG.ffmpeg_binary = nil
     end
 
     it 'should default to finding from path' do
-      allow(FFMPEG).to receive(:which) { '/usr/local/bin/ffmpeg' }
-      expect(FFMPEG.ffmpeg_binary).to eq FFMPEG.which('ffprobe')
+      expect(FFMPEG.ffmpeg_binary).to eq FFMPEG.which('ffmpeg')
     end
 
     it 'should be assignable' do
@@ -47,17 +57,14 @@ describe FFMPEG do
       allow(File).to receive(:executable?) { false }
       expect { FFMPEG.ffmpeg_binary }.to raise_error(Errno::ENOENT)
     end
-
   end
 
   describe '.ffprobe_binary' do
-
     after(:each) do
       FFMPEG.ffprobe_binary = nil
     end
 
     it 'should default to finding from path' do
-      allow(FFMPEG).to receive(:which) { '/usr/local/bin/ffprobe' }
       expect(FFMPEG.ffprobe_binary).to eq FFMPEG.which('ffprobe')
     end
 
@@ -75,7 +82,6 @@ describe FFMPEG do
       allow(File).to receive(:executable?) { false }
       expect { FFMPEG.ffprobe_binary }.to raise_error(Errno::ENOENT)
     end
-
   end
 
   describe '.max_http_redirect_attempts' do
