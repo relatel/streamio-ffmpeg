@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper.rb'
 
 module FFMPEG
@@ -66,7 +68,7 @@ module FFMPEG
           end
 
           it 'should still work with (NTSC target)' do
-            encoded = Transcoder.new(movie, "#{tmp_path}/awesome.mpg", target: 'ntsc-vcd').run
+            encoded = Transcoder.new(movie, "#{tmp_path}/awesome.mpg", target: 'ntsc-vcd', duration: 0.5).run
             expect(encoded.resolution).to eq('352x240')
           end
 
@@ -76,13 +78,13 @@ module FFMPEG
         it "should transcode the movie with progress given an awesome movie" do
           FileUtils.rm_f "#{tmp_path}/awesome.flv"
 
-          transcoder = Transcoder.new(movie, "#{tmp_path}/awesome.flv")
+          transcoder = Transcoder.new(movie, "#{tmp_path}/awesome.flv", duration: 1)
           progress_updates = []
           transcoder.run { |progress| progress_updates << progress }
           expect(transcoder.encoded).to be_valid
           expect(progress_updates).to include(0.0, 1.0)
           expect(progress_updates.length).to be >= 3
-          expect(File.exists?("#{tmp_path}/awesome.flv")).to be_truthy
+          expect(File.exist?("#{tmp_path}/awesome.flv")).to be_truthy
         end
 
         it "should transcode the movie with EncodingOptions" do
@@ -107,7 +109,7 @@ module FFMPEG
           it 'should transcode without video' do
             FileUtils.rm_f "#{tmp_path}/hello.mp3"
 
-            options = { audio_codec: "libmp3lame", custom: %w(-qscale:a 2)}
+            options = { audio_codec: "libmp3lame", custom: %w(-qscale:a 2), duration: 0.5}
 
             encoded = Transcoder.new(sound, "#{tmp_path}/hello.mp3", options).run
             expect(encoded.video_codec).to be_nil
@@ -120,7 +122,7 @@ module FFMPEG
         context "with aspect ratio preservation" do
           before do
             @movie = Movie.new("#{fixture_path}/movies/awesome_widescreen.mov")
-            @options = {resolution: "320x240"}
+            @options = {resolution: "320x240", duration: 0.5}
           end
 
           it "should work on width" do
@@ -157,7 +159,7 @@ module FFMPEG
         it "should transcode the movie with String options" do
           FileUtils.rm_f "#{tmp_path}/string_optionalized.flv"
 
-          encoded = Transcoder.new(movie, "#{tmp_path}/string_optionalized.flv", %w(-s 300x200 -ac 2)).run
+          encoded = Transcoder.new(movie, "#{tmp_path}/string_optionalized.flv", %w(-s 300x200 -ac 2 -t 0.5)).run
           expect(encoded.resolution).to eq("300x200")
           expect(encoded.audio_channels).to eq(2)
         end
@@ -167,19 +169,19 @@ module FFMPEG
 
           movie = Movie.new("#{fixture_path}/movies/awesome'movie.mov")
 
-          expect { Transcoder.new(movie, "#{tmp_path}/output.flv").run }.not_to raise_error
+          expect { Transcoder.new(movie, "#{tmp_path}/output.flv", duration: 0.5).run }.not_to raise_error
         end
 
         it "should transcode when output filename includes single quotation mark" do
           FileUtils.rm_f "#{tmp_path}/output with 'quote.flv"
 
-          expect { Transcoder.new(movie, "#{tmp_path}/output with 'quote.flv").run }.not_to raise_error
+          expect { Transcoder.new(movie, "#{tmp_path}/output with 'quote.flv", duration: 0.5).run }.not_to raise_error
         end
 
         it 'should not crash on ISO-8859-1 characters' do
           FileUtils.rm_f "#{tmp_path}/saløndethé.flv"
 
-          expect { Transcoder.new(movie, "#{tmp_path}/saløndethé.flv").run }.not_to raise_error
+          expect { Transcoder.new(movie, "#{tmp_path}/saløndethé.flv", duration: 0.5).run }.not_to raise_error
         end
 
         it "should fail when given an invalid movie" do
@@ -203,7 +205,7 @@ module FFMPEG
           it "should transcode correctly" do
             movie = Movie.new("http://127.0.0.1:8000/awesome%20movie.mov")
 
-            expect { Transcoder.new(movie, "#{tmp_path}/output.flv").run }.not_to raise_error
+            expect { Transcoder.new(movie, "#{tmp_path}/output.flv", duration: 0.5).run }.not_to raise_error
           end
         end
 
@@ -264,7 +266,7 @@ module FFMPEG
       context 'with default transcoder_options' do
 
         it 'should transcode the movie with the watermark' do
-          options = { watermark: "#{fixture_path}/images/watermark.png", watermark_filter: { position: 'RB' }  }
+          options = { watermark: "#{fixture_path}/images/watermark.png", watermark_filter: { position: 'RB' }, duration: 0.5 }
           transcoder = Transcoder.new(movie, "#{tmp_path}/watermarked.mp4", options)
           expect { transcoder.run }.not_to raise_error
         end
@@ -297,7 +299,8 @@ module FFMPEG
       context 'with custom options' do
         let(:options) { {
             video_codec: 'libx264',
-            custom: %w(-map 0:0 -map 0:1)
+            custom: %w(-map 0:0 -map 0:1),
+            duration: 0.5
           } }
         let(:transcoding_options) { {} }
 

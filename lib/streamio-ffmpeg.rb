@@ -1,14 +1,13 @@
-$LOAD_PATH.unshift File.dirname(__FILE__)
+# frozen_string_literal: true
 
 require 'logger'
 require 'stringio'
 
-require 'ffmpeg/version'
-require 'ffmpeg/errors'
-require 'ffmpeg/movie'
-require 'ffmpeg/io_monkey'
-require 'ffmpeg/transcoder'
-require 'ffmpeg/encoding_options'
+require_relative 'ffmpeg/version'
+require_relative 'ffmpeg/errors'
+require_relative 'ffmpeg/movie'
+require_relative 'ffmpeg/transcoder'
+require_relative 'ffmpeg/encoding_options'
 
 module FFMPEG
   # FFMPEG logs information about its progress when it's transcoding.
@@ -24,10 +23,7 @@ module FFMPEG
   #
   # @return [Logger]
   def self.logger
-    return @logger if @logger
-    logger = Logger.new(STDOUT)
-    logger.level = Logger::INFO
-    @logger = logger
+    @logger ||= Logger.new(STDOUT).tap { |l| l.level = Logger::INFO }
   end
 
   # Set the path of the ffmpeg binary.
@@ -38,7 +34,7 @@ module FFMPEG
   # @raise Errno::ENOENT if the ffmpeg binary cannot be found
   def self.ffmpeg_binary=(bin)
     if bin.is_a?(String) && !File.executable?(bin)
-      raise Errno::ENOENT, "the ffmpeg binary, \'#{bin}\', is not executable"
+      raise Errno::ENOENT, "the ffmpeg binary, '#{bin}', is not executable"
     end
     @ffmpeg_binary = bin
   end
@@ -48,7 +44,7 @@ module FFMPEG
   # @return [String] the path to the ffmpeg binary
   # @raise Errno::ENOENT if the ffmpeg binary cannot be found
   def self.ffmpeg_binary
-    @ffmpeg_binary || which('ffmpeg')
+    @ffmpeg_binary ||= which('ffmpeg')
   end
 
   # Get the path to the ffprobe binary, defaulting to what is on ENV['PATH']
@@ -56,7 +52,7 @@ module FFMPEG
   # @return [String] the path to the ffprobe binary
   # @raise Errno::ENOENT if the ffprobe binary cannot be found
   def self.ffprobe_binary
-    @ffprobe_binary || which('ffprobe')
+    @ffprobe_binary ||= which('ffprobe')
   end
 
   # Set the path of the ffprobe binary.
@@ -67,7 +63,7 @@ module FFMPEG
   # @raise Errno::ENOENT if the ffprobe binary cannot be found
   def self.ffprobe_binary=(bin)
     if bin.is_a?(String) && !File.executable?(bin)
-      raise Errno::ENOENT, "the ffprobe binary, \'#{bin}\', is not executable"
+      raise Errno::ENOENT, "the ffprobe binary, '#{bin}', is not executable"
     end
     @ffprobe_binary = bin
   end
@@ -93,7 +89,6 @@ module FFMPEG
   # Cross-platform way of finding an executable in the $PATH.
   #
   #   which('ruby') #=> /usr/bin/ruby
-  # see: http://stackoverflow.com/questions/2108727/which-in-ruby-checking-if-program-exists-in-path-from-ruby
   def self.which(cmd)
     exts = ENV['PATHEXT'] ? ENV['PATHEXT'].split(';') : ['']
     ENV['PATH'].split(File::PATH_SEPARATOR).each do |path|
@@ -105,4 +100,9 @@ module FFMPEG
     raise Errno::ENOENT, "the #{cmd} binary could not be found in #{ENV['PATH']}"
   end
 
+  def self.fix_encoding(output)
+    output[/test/]
+  rescue ArgumentError
+    output.force_encoding("ISO-8859-1")
+  end
 end

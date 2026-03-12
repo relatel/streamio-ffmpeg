@@ -1,21 +1,19 @@
-# -*- encoding: utf-8 -*-
-lib = File.expand_path('../lib/', __FILE__)
-$:.unshift lib unless $:.include?(lib)
-
-require "ffmpeg/version"
+require_relative "lib/ffmpeg/version"
 
 Gem::Specification.new do |s|
   s.name        = "streamio-ffmpeg"
   s.version     = FFMPEG::VERSION
   s.authors     = ["Rackfish AB"]
   s.email       = ["support@rackfish.com", "bikeath1337.com"]
-  s.homepage    = "http://github.com/streamio/streamio-ffmpeg"
+  s.homepage    = "https://github.com/streamio/streamio-ffmpeg"
   s.summary     = "Wraps ffmpeg to read metadata and transcodes videos."
+  s.license     = "MIT"
 
-  s.add_dependency('multi_json', '~> 1.8')
+  s.metadata["allowed_push_host"] = "https://rubygems.org"
 
-  s.add_development_dependency("rspec", "~> 3")
-  s.add_development_dependency("rake", "~> 10.1")
+  s.required_ruby_version = ">= 3.3"
 
-  s.files        = Dir.glob("lib/**/*") + %w(README.md LICENSE CHANGELOG)
+  s.add_dependency "logger"
+
+  s.files = Dir.glob("lib/**/*") + %w(README.md LICENSE CHANGELOG)
 end

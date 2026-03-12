@@ -1,15 +1,9 @@
 Streamio FFMPEG
 ===============
 
-[![Build Status](https://travis-ci.org/bikeath1337/streamio-ffmpeg.svg?branch=master)](https://travis-ci.org/bikeath1337/streamio-ffmpeg)
-[![Code Climate](https://codeclimate.com/github/bikeath1337/streamio-ffmpeg/badges/gpa.svg)](https://codeclimate.com/github/bikeath1337/streamio-ffmpeg)
-[![Test Coverage](https://codeclimate.com/github/bikeath1337/streamio-ffmpeg/badges/coverage.svg)](https://codeclimate.com/github/bikeath1337/streamio-ffmpeg/coverage)
-
 Simple yet powerful wrapper around the ffmpeg command for reading metadata and transcoding movies.
 
 All work on this project is sponsored by the online video platform [Streamio](https://streamio.com) from [Rackfish](https://www.rackfish.com).
-
-[![Streamio](http://d253c4ja9jigvu.cloudfront.net/assets/small-logo.png)](https://streamio.com)
 
 Installation
 ------------
@@ -21,17 +15,11 @@ Compatibility
 
 ### Ruby
 
-Only guaranteed to work with MRI Ruby 1.9.3 or later.
-Should work with rubinius head in 1.9 mode.
-Will not work in jruby until they fix: http://goo.gl/Z4UcX (should work in the upcoming 1.7.5)
+Requires Ruby 3.3 or later.
 
 ### ffmpeg
 
-The current gem is tested against ffmpeg 2.8.4. So no guarantees with earlier (or much later) 
-versions. Output and input standards have inconveniently changed rather a lot between versions 
-of ffmpeg. My goal is to keep this library in sync with new versions of ffmpeg as they come along.
-
-On macOS: `brew install ffmpeg`.
+Should work with any modern ffmpeg. Install with your package manager, e.g. on macOS: `brew install ffmpeg`.
 
 Usage
 -----
@@ -127,11 +115,9 @@ widescreen_movie = FFMPEG::Movie.new("path/to/widescreen_movie.mov")
 
 options = { resolution: "320x240" }
 
-transcoder_options = { preserve_aspect_ratio: :width }
-widescreen_movie.transcode("movie.mp4", options, transcoder_options) # Output resolution will be 320x180
+widescreen_movie.transcode("movie.mp4", options, preserve_aspect_ratio: :width) # Output resolution will be 320x180
 
-transcoder_options = { preserve_aspect_ratio: :height }
-widescreen_movie.transcode("movie.mp4", options, transcoder_options) # Output resolution will be 426x240
+widescreen_movie.transcode("movie.mp4", options, preserve_aspect_ratio: :height) # Output resolution will be 426x240
 ```
 
 For constant bitrate encoding use video_min_bitrate and video_max_bitrate with buffer_size.
@@ -143,14 +129,12 @@ movie.transcode("movie.flv", options)
 
 ### Specifying Input Options
 
-To specify which options apply the input, such as changing the input framerate, use `input_options` hash
-in the transcoder_options.
+To specify which options apply the input, such as changing the input framerate, use `input_options` keyword argument.
 
 ``` ruby
 movie = FFMPEG::Movie.new("path/to/movie.mov")
 
-transcoder_options = { input_options: { framerate: '1/5' } }
-movie.transcode("movie.mp4", {}, transcoder_options)
+movie.transcode("movie.mp4", {}, input_options: { framerate: '1/5' })
 
 # FFMPEG Command will look like this:
 # ffmpeg -y -framerate 1/5 -i path/to/movie.mov movie.mp4
@@ -158,14 +142,13 @@ movie.transcode("movie.mp4", {}, transcoder_options)
 
 ### Overriding the Input Path
 
-If FFMPEG's input path needs to specify a sequence of files, rather than a path to a single movie, transcoding_options
-`input` can be set. If this option is present, the path of the original movie will not be used.
+If FFMPEG's input path needs to specify a sequence of files, rather than a path to a single movie, the
+`input` keyword argument can be set. If this option is present, the path of the original movie will not be used.
 
 ``` ruby
 movie = FFMPEG::Movie.new("path/to/movie.mov")
 
-transcoder_options = { input: 'img_%03d.png' }
-movie.transcode("movie.mp4", {}, transcoder_options)
+movie.transcode("movie.mp4", {}, input: 'img_%03d.png')
 
 # FFMPEG Command will look like this:
 # ffmpeg -y -i img_%03d.png movie.mp4
@@ -244,7 +227,7 @@ slideshow = slideshow_transcoder.run
 Specify the path to ffmpeg
 --------------------------
 
-By default, the gem assumes that the ffmpeg binary is available in the execution path and named ffmpeg and so will run commands that look something like `ffmpeg -i /path/to/input.file ...`. Use the FFMPEG.ffmpeg_binary setter to specify the full path to the binary if necessary:
+By default, the gem finds the ffmpeg binary from your PATH. Use the FFMPEG.ffmpeg_binary setter to specify the full path to the binary if necessary:
 
 ``` ruby
 FFMPEG.ffmpeg_binary = '/usr/local/bin/ffmpeg'
@@ -272,14 +255,13 @@ Disabling output file validation
 
 By default Transcoder validates the output file, in case you use FFMPEG for HLS
 format that creates multiple outputs you can disable the validation by passing
-`validate: false` to transcoder_options.
+`validate: false`.
 
 Note that transcode will not return the encoded movie object in this case since
 attempting to open a (possibly) invalid output file might result in an error being raised.
 
 ```ruby
-transcoder_options = { validate: false }
-movie.transcode("movie.mp4", options, transcoder_options) # returns nil
+movie.transcode("movie.mp4", options, validate: false) # returns nil
 ```
 
 Copyright
